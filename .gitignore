@@ -1,0 +1,7 @@
+/target/
+/.cargo/config.toml
+/local.properties
+**/build/
+**/.gradle/
+*.apk
+**/jniLibs/
