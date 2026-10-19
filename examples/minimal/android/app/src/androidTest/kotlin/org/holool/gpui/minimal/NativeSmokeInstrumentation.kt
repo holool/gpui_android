@@ -60,9 +60,15 @@ class NativeSmokeInstrumentation : Instrumentation() {
                 connection.deleteSurroundingTextInCodePoints(1,0)
                 checkText("مرحبا")
                 connection.finishComposingText()
+                connection.setComposingText("س",1)
+                GpuiNative.back()
+                check(state().isNull("composing")) { "Application Back did not consume composition" }
+                check(!activity.isFinishing)
                 connection.closeConnection()
+                GpuiNative.back()
+                check(activity.isFinishing) { "Unconsumed Back did not finish Activity" }
             }
-            finish(Activity.RESULT_OK, Bundle().apply { putString("stream", "GPUI native InputConnection smoke passed: Arabic composition, UTF16 selection, both-side and codepoint deletion\n") })
+            finish(Activity.RESULT_OK, Bundle().apply { putString("stream", "GPUI native InputConnection smoke passed: Arabic composition, UTF16 selection, both-side/codepoint deletion, consumed/unconsumed Back\n") })
         } catch (error: Throwable) {
             finish(Activity.RESULT_CANCELED, Bundle().apply { putString("stream", error.stackTraceToString()) })
         }

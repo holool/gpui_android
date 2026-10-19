@@ -3,5 +3,6 @@
 /local.properties
 **/build/
 **/.gradle/
+**/.kotlin/
 *.apk
 **/jniLibs/

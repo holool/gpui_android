@@ -16,6 +16,8 @@ adb shell am start -n org.holool.gpui.minimal/org.holool.gpui.GpuiActivity
 
 The final Rust shared library uses 16 KB maximum/common ELF page alignment. The included Gradle wrapper is pinned to 8.14.3. The sample and CI currently build arm64-v8a for Android 11 / API 30 and newer. `cargo test -p gpui_android --lib` also runs the platform-independent UTF-16 regression tests on the host.
 
+Validated on an arm64 API 36.1 emulator: native Arabic/mixed-direction rendering, raw touch pan and momentum, real keyboard activation, InputConnection edits, consumed/unconsumed app Back, and Activity background/foreground surface recreation. The observed Goldfish/ranchu Vulkan driver crashes or loses its device, so Fast selects GLES for those emulator identities automatically. Physical Vulkan device qualification remains outstanding; other Android Vulkan adapters retain the native path. A fixed sample emoji row renders blank spaces on this emulator despite `Noto Color Emoji` being present in Cosmic's font database. The text fallback/rasterization cause remains unisolated; Unicode editing tests do not establish emoji rendering support.
+
 The sample also includes an instrumentation runner that drives the real Kotlin `InputConnection` through JNI into a focused GPUI input handler:
 
 ```sh
@@ -38,7 +40,13 @@ fn launch(cx: &mut gpui::App) {
 gpui_android::android_main!(launch);
 ```
 
-The macro uses this crate's internal GPUI/JNI reexports, so an application using the macro through a facade need not name `jni` directly. Include `android/src/main/kotlin` in the Android application's source set, copy its compiled shared library to `src/main/jniLibs/arm64-v8a`, and subclass `org.holool.gpui.GpuiActivity`:
+Applications can configure assets or other builder options before launch:
+
+```rust,ignore
+gpui_android::android_main!(launch, |app| app.with_assets(MyAssets));
+```
+
+`run_with` retains the configured `Application` while Android owns the event loop. The macro uses this crate's internal GPUI/JNI reexports, so an application using the macro through a facade need not name `jni` directly. Include `android/src/main/kotlin` in the Android application's source set, copy its compiled shared library to `src/main/jniLibs/arm64-v8a`, and subclass `org.holool.gpui.GpuiActivity`:
 
 ```kotlin
 class MainActivity : org.holool.gpui.GpuiActivity() {
@@ -46,9 +54,11 @@ class MainActivity : org.holool.gpui.GpuiActivity() {
 }
 ```
 
-Use the sample manifest's configuration-change handling. The activity owns the OS event loop. `android_main!` initializes the platform and calls `run`, which retains GPUI's `run_embedded` application handle until the activity is destroyed. Do not also call `Application::run`.
+Register app navigation with `on_back(|cx| { /* close an editor, etc. */ true })`. The callback runs through the retained GPUI app; `true` consumes Back and `false` finishes the Activity. Android dismisses a visible software keyboard before invoking app navigation.
 
-`application()`, `run(callback)`, and `data_directory()` are available **only on the Android UI thread after native initialization**, normally inside the launch callback. `data_directory()` returns `Activity.filesDir` for app-private persistent data. A native surface must exist before opening the single GPUI window. No backend API is available on non-Android targets; the pure `input` module remains available for tests.
+Use the sample manifest's configuration-change handling. The activity owns the OS event loop. `android_main!` initializes the platform and calls `run_with`, which retains GPUI's `run_embedded` application handle until the activity is destroyed. Do not also call `Application::run`.
+
+`application()`, `run(callback)`, `run_with(application, callback)`, `on_back(callback)`, and `data_directory()` are available **only on the Android UI thread after native initialization**, normally inside the launch callback. `data_directory()` returns `Activity.filesDir` for app-private persistent data. A native surface must exist before opening the single GPUI window. No backend API is available on non-Android targets; the pure `input` module remains available for tests.
 
 ## Implemented behavior
 

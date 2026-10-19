@@ -8,7 +8,7 @@ pub mod input;
 #[cfg(target_os = "android")]
 pub use backend::{AndroidPlatform, initialize};
 #[cfg(target_os = "android")]
-pub use backend::{application, data_directory, run};
+pub use backend::{application, data_directory, on_back, run, run_with};
 #[doc(hidden)]
 #[cfg(target_os = "android")]
 pub mod __private {
@@ -20,6 +20,9 @@ pub mod __private {
 #[macro_export]
 macro_rules! android_main {
     ($launch:path) => {
+        $crate::android_main!($launch, |app| app);
+    };
+    ($launch:path, $configure:expr) => {
         #[unsafe(no_mangle)]
         pub extern "system" fn Java_org_holool_gpui_GpuiNative_start(
             mut env: $crate::__private::jni::JNIEnv,
@@ -32,7 +35,7 @@ macro_rules! android_main {
         ) -> u8 {
             match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 $crate::initialize(&mut env, activity, surface, width, height, scale)?;
-                $crate::run($launch);
+                $crate::run_with(($configure)($crate::application()), $launch);
                 Ok::<(), Box<dyn std::error::Error>>(())
             })) {
                 Ok(Ok(())) => 1,

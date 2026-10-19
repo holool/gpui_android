@@ -160,6 +160,7 @@ mod mobile {
                 .gap_4()
                 .child(div().text_2xl().child("مرحباً من GPUI على أندرويد"))
                 .child(div().child("Arabic shaping • Fast scroll tiles • Native touch"))
+                .child(div().child("Emoji fixture: [😀] [🌍] [🦀]"))
                 .child(
                     div()
                         .id("input")
@@ -210,19 +211,32 @@ mod mobile {
         }
     }
     pub fn launch(cx: &mut App) {
-        cx.open_window(WindowOptions::default(), |window, cx| {
-            cx.new(|cx| {
-                let focus = cx.focus_handle();
-                window.focus(&focus, cx);
-                Demo {
-                    focus,
-                    text: "اضغط هنا للكتابة — Hello 😀".into(),
-                    selection: 0..0,
-                    marked: None,
-                }
+        let window = cx
+            .open_window(WindowOptions::default(), |window, cx| {
+                cx.new(|cx| {
+                    let focus = cx.focus_handle();
+                    window.focus(&focus, cx);
+                    Demo {
+                        focus,
+                        text: "اضغط هنا للكتابة — Hello 😀".into(),
+                        selection: 0..0,
+                        marked: None,
+                    }
+                })
             })
-        })
-        .expect("Android GPUI window");
+            .expect("Android GPUI window");
+        gpui_android::on_back(move |cx| {
+            window
+                .update(cx, |view, _, cx| {
+                    if view.marked.take().is_some() {
+                        cx.notify();
+                        true
+                    } else {
+                        false
+                    }
+                })
+                .unwrap_or(false)
+        });
     }
 }
 #[cfg(target_os = "android")]

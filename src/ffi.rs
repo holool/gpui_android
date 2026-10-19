@@ -8,6 +8,9 @@ use jni::{
 use serde::Deserialize;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 fn guarded(f: impl FnOnce()) {
+    if !backend::is_initialized() {
+        return;
+    }
     if let Err(e) = catch_unwind(AssertUnwindSafe(f)) {
         log::error!("GPUI Android callback panic: {e:?}");
     }
@@ -147,13 +150,9 @@ pub extern "system" fn Java_org_holool_gpui_GpuiNative_insets(
 }
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_org_holool_gpui_GpuiNative_back(_: JNIEnv, _: JClass) {
-    guarded(|| {
-        with_platform(|p| {
-            if let Some(s) = p.state() {
-                s.back();
-            }
-        })
-    });
+    if backend::is_initialized() {
+        guarded(|| with_platform(|p| p.back()));
+    }
 }
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_org_holool_gpui_GpuiNative_snapshot(env: JNIEnv, _: JClass) -> jstring {
@@ -168,6 +167,9 @@ pub extern "system" fn Java_org_holool_gpui_GpuiNative_edit(
     _: JClass,
     command: JString,
 ) -> jboolean {
+    if !backend::is_initialized() {
+        return 0;
+    }
     let Ok(command) = env.get_string(&command) else {
         return 0;
     };

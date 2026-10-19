@@ -35,8 +35,29 @@ pub fn application() -> Application {
 }
 /// Retains GPUI while Android owns the process event loop.
 pub fn run(on_launch: impl FnOnce(&mut App) + 'static) {
-    let handle = application().run_embedded(on_launch);
+    run_with(application(), on_launch);
+}
+/// Retains a configured application (for example, one with an asset source).
+/// Call on Android's UI thread after native initialization.
+pub fn run_with(application: Application, on_launch: impl FnOnce(&mut App) + 'static) {
+    let handle = application.run_embedded(on_launch);
     APP.with(|app| *app.borrow_mut() = Some(handle));
+}
+/// Routes Android Back through the retained app. Return true when consumed;
+/// false finishes the Activity. Register on the UI thread after native initialization.
+pub fn on_back(mut callback: impl FnMut(&mut App) -> bool + 'static) {
+    with_platform(|platform| {
+        platform.callbacks.borrow_mut().app_back = Some(Box::new(move || {
+            APP.with(|app| {
+                app.borrow()
+                    .as_ref()
+                    .is_some_and(|handle| handle.update(|cx| callback(cx)))
+            })
+        }));
+        platform
+            .host
+            .call("backEnabled", "(Z)V", &[JValue::Bool(1)]);
+    });
 }
 pub(crate) fn with_platform<R>(f: impl FnOnce(&Rc<AndroidPlatform>) -> R) -> R {
     PLATFORM.with(|p| {
@@ -189,11 +210,19 @@ impl PlatformDispatcher for Dispatcher {
         let _ = self.background.send(r);
     }
     fn dispatch_on_main_thread(&self, r: RunnableVariant, _: Priority) {
-        let _ = self.main.send(r);
+        if let Err(error) = self.main.send(r) {
+            // Foreground futures may be !Send. Never destroy one on a worker
+            // after Android has dropped the UI-thread receiver during shutdown.
+            std::mem::forget(error.0);
+            return;
+        }
         self.host.wake();
     }
     fn dispatch_after(&self, d: Duration, r: RunnableVariant) {
-        let _ = self.timers.send((Instant::now() + d, r));
+        if let Err(error) = self.timers.send((Instant::now() + d, r)) {
+            // Leave timers pending during teardown instead of cancelling an awaiter.
+            std::mem::forget(error.0);
+        }
     }
     fn spawn_realtime(&self, f: Box<dyn FnOnce() + Send>) {
         let _ = thread::Builder::new().name("gpui-realtime".into()).spawn(f);
@@ -201,6 +230,7 @@ impl PlatformDispatcher for Dispatcher {
 }
 #[derive(Default)]
 struct PlatformCallbacks {
+    app_back: Option<Box<dyn FnMut() -> bool>>,
     lifecycle: Option<Box<dyn FnMut(AppLifecyclePhase)>>,
     memory: Option<Box<dyn FnMut()>>,
     sleep: Option<Box<dyn FnMut()>>,
@@ -237,13 +267,21 @@ impl AndroidPlatform {
                         .and_then(|s| s.to_str())
                         .is_some_and(|s| matches!(s, "ttf" | "otf" | "ttc"))
                     {
-                        if let Ok(bytes) = std::fs::read(path) {
-                            let _ = text.add_fonts(vec![Cow::Owned(bytes)]);
+                        if let Ok(bytes) = std::fs::read(&path) {
+                            if let Err(error) = text.add_fonts(vec![Cow::Owned(bytes)]) {
+                                log::warn!("Could not load font {}: {error}", path.display());
+                            }
                         }
                     }
                 }
             }
         }
+        let families = text.all_font_names();
+        log::info!(
+            "Loaded {} system font families; Noto Color Emoji available: {}",
+            families.len(),
+            families.iter().any(|family| family == "Noto Color Emoji")
+        );
         Self {
             host,
             background: BackgroundExecutor::new(dispatcher.clone()),
@@ -373,6 +411,23 @@ impl AndroidPlatform {
         }
         if phase == AppLifecyclePhase::Active {
             self.host.wake();
+        }
+    }
+    pub(crate) fn back(&self) {
+        let callback = self.callbacks.borrow_mut().app_back.take();
+        if let Some(mut callback) = callback {
+            let consumed = callback();
+            let restore = self.callbacks.borrow().app_back.is_none();
+            if restore {
+                self.callbacks.borrow_mut().app_back = Some(callback);
+            }
+            if !consumed {
+                self.host.call("finish", "()V", &[]);
+            }
+        } else if let Some(state) = self.state() {
+            state.back();
+        } else {
+            self.host.call("finish", "()V", &[]);
         }
     }
     pub(crate) fn memory_warning(&self) {
