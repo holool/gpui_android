@@ -23,7 +23,10 @@ jobs:
       - run: scripts/build-android.sh
         env:
           CARGO_BUILD_JOBS: '4'
+      - run: examples/minimal/android/gradlew -p examples/minimal/android assembleDebugAndroidTest
       - uses: actions/upload-artifact@v4
         with:
           name: gpui-android-arm64-debug
-          path: examples/minimal/android/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            examples/minimal/android/app/build/outputs/apk/debug/app-debug.apk
+            examples/minimal/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk

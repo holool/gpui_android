@@ -18,7 +18,7 @@ The final Rust shared library uses 16 KB maximum/common ELF page alignment. The 
 
 Validated on an arm64 API 36.1 emulator: native Arabic/mixed-direction rendering, raw touch pan and momentum, real keyboard activation, InputConnection edits, consumed/unconsumed app Back, and Activity background/foreground surface recreation. The observed Goldfish/ranchu Vulkan driver crashes or loses its device, so Fast selects GLES for those emulator identities automatically. Physical Vulkan device qualification remains outstanding; other Android Vulkan adapters retain the native path. A fixed sample emoji row renders blank spaces on this emulator despite `Noto Color Emoji` being present in Cosmic's font database. The text fallback/rasterization cause remains unisolated; Unicode editing tests do not establish emoji rendering support.
 
-The sample also includes an instrumentation runner that drives the real Kotlin `InputConnection` through JNI into a focused GPUI input handler:
+The sample also includes an instrumentation runner that verifies Android's virtual-node screen bounds against GPUI's physical pixel bounds, then drives the real Kotlin `InputConnection` through JNI into a focused GPUI input handler:
 
 ```sh
 # Use JDK 17 for Gradle, as in scripts/build-android.sh.
