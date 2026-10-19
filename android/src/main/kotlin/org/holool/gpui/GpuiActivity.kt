@@ -165,8 +165,9 @@ internal class GpuiView(private val host:GpuiActivity):SurfaceView(host),Surface
         parent?.requestSendAccessibilityEvent(this,e)
     }
     private fun bounds(n:JSONObject):Rect{
-        val b=n.optJSONArray("bounds")?:JSONArray();val s=resources.displayMetrics.density
-        return Rect((b.optDouble(0)*s).toInt(),(b.optDouble(1)*s).toInt(),(b.optDouble(2)*s).toInt(),(b.optDouble(3)*s).toInt())
+        // GPUI's AccessKit nodes already contain physical window pixels.
+        val b=n.optJSONArray("bounds")?:JSONArray()
+        return Rect(b.optDouble(0).toInt(),b.optDouble(1).toInt(),b.optDouble(2).toInt(),b.optDouble(3).toInt())
     }
     override fun dispatchHoverEvent(e:MotionEvent):Boolean{
         val manager=context.getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager

@@ -3,15 +3,18 @@ package org.holool.gpui.minimal
 import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
+import android.graphics.Rect
 import android.os.Bundle
 import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
+import android.view.accessibility.AccessibilityNodeInfo
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import org.holool.gpui.GpuiActivity
 import org.holool.gpui.GpuiNative
 import org.json.JSONObject
+import org.json.JSONArray
 
 /** No test framework dependency: exercises the real Activity -> JNI -> GPUI input path. */
 class NativeSmokeInstrumentation : Instrumentation() {
@@ -26,6 +29,30 @@ class NativeSmokeInstrumentation : Instrumentation() {
                 if (!ready) Thread.sleep(100)
             }
             check(ready) { "GPUI input handler was not installed" }
+            fun findInput(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
+                if (node == null) return null
+                if (node.contentDescription?.toString() == "Arabic input") return node
+                for (index in 0 until node.childCount) findInput(node.getChild(index))?.let { return it }
+                return null
+            }
+            val a11yDeadline = System.currentTimeMillis() + 10_000
+            var inputNode: AccessibilityNodeInfo? = null
+            while (inputNode == null && System.currentTimeMillis() < a11yDeadline) {
+                inputNode = findInput(uiAutomation.rootInActiveWindow)
+                if (inputNode == null) Thread.sleep(100)
+            }
+            val actualBounds = Rect()
+            checkNotNull(inputNode) { "Android virtual input node missing" }.getBoundsInScreen(actualBounds)
+            runOnMainSync {
+                val nodes = JSONArray(GpuiNative.accessibility())
+                val node = (0 until nodes.length()).map { nodes.getJSONObject(it) }.first { it.optString("label") == "Arabic input" }
+                val expected = node.getJSONArray("bounds")
+                val screenOrigin = IntArray(2)
+                activity.window.decorView.getLocationOnScreen(screenOrigin)
+                check(kotlin.math.abs(actualBounds.left - expected.getDouble(0).toInt() - screenOrigin[0]) <= 2) { "$actualBounds vs $expected" }
+                check(kotlin.math.abs(actualBounds.right - expected.getDouble(2).toInt() - screenOrigin[0]) <= 2) { "$actualBounds vs $expected" }
+                check(actualBounds.width() in 1..activity.resources.displayMetrics.widthPixels) { "$actualBounds" }
+            }
             runOnMainSync {
                 fun surface(view: View): SurfaceView? = if (view is SurfaceView) view else if(view is ViewGroup) (0 until view.childCount).firstNotNullOfOrNull { surface(view.getChildAt(it)) } else null
                 val view = checkNotNull(surface(activity.window.decorView))
@@ -68,7 +95,7 @@ class NativeSmokeInstrumentation : Instrumentation() {
                 GpuiNative.back()
                 check(activity.isFinishing) { "Unconsumed Back did not finish Activity" }
             }
-            finish(Activity.RESULT_OK, Bundle().apply { putString("stream", "GPUI native InputConnection smoke passed: Arabic composition, UTF16 selection, both-side/codepoint deletion, consumed/unconsumed Back\n") })
+            finish(Activity.RESULT_OK, Bundle().apply { putString("stream", "GPUI native smoke passed: Android virtual node physical bounds, Arabic composition, UTF16 selection, both-side/codepoint deletion, consumed/unconsumed Back\n") })
         } catch (error: Throwable) {
             finish(Activity.RESULT_CANCELED, Bundle().apply { putString("stream", error.stackTraceToString()) })
         }
