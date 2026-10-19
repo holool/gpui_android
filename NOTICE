@@ -1,0 +1,7 @@
+GPUI Android backend, Copyright 2026 Holool.
+Apache License 2.0; see LICENSE.
+The JNI/native-window hosting architecture was informed by Tan Le's GPUI mobile
+port (https://github.com/tanlethanh/zed, feat/gpui-mobile), a fork of Zed.
+GPUI and the rendering/text engines are Copyright Zed Industries contributors
+and Longbridge / Holool contributors, licensed Apache-2.0. This package uses
+those engines as dependencies; it does not copy their renderers or shapers.
