@@ -16,7 +16,7 @@ pub mod __private {
     pub use jni;
 }
 /// Export the Activity's native entry point. `launch` receives GPUI's App context;
-/// the backend retains its ApplicationHandle until process teardown.
+/// the backend retains its ApplicationHandle until the host Activity is destroyed.
 #[macro_export]
 macro_rules! android_main {
     ($launch:path) => {

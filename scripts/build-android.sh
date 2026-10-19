@@ -20,3 +20,10 @@ elif [[ -n "${GPUI_JAVA_HOME:-}" ]]; then
   export JAVA_HOME="$GPUI_JAVA_HOME"
 fi
 if [[ -n "${GRADLE:-}" ]]; then "$GRADLE" -p examples/minimal/android assembleDebug; else examples/minimal/android/gradlew -p examples/minimal/android assembleDebug; fi
+
+BUILD_TOOLS="${ANDROID_BUILD_TOOLS_VERSION:-36.0.0}"
+python3 scripts/check-android-artifact.py \
+  "$NDK_PATH/toolchains/llvm/prebuilt/$NDK_HOST/bin/llvm-readelf" \
+  "$LIB_DIR/libgpui_minimal.so" \
+  "$SDK_PATH/build-tools/$BUILD_TOOLS/zipalign" \
+  examples/minimal/android/app/build/outputs/apk/debug/app-debug.apk

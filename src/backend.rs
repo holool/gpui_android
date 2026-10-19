@@ -270,10 +270,33 @@ impl AndroidPlatform {
             }
         }
         if let Some(s) = self.state() {
-            if s.visible.get() == WindowVisibility::Visible && s.renderer.borrow().is_some() {
+            if s.visible.get() == WindowVisibility::Visible
+                && s.native.borrow().is_some()
+                && s.renderer.borrow().is_some()
+            {
+                let mut force_render = s.force_render.replace(false);
+                {
+                    let mut renderer = s.renderer.borrow_mut();
+                    if let Some(renderer) = renderer.as_mut() {
+                        if renderer.device_lost() {
+                            let native = s.native.borrow();
+                            let raw = RawWindow(native.as_ref().unwrap().ptr().as_ptr() as usize);
+                            if let Err(error) = renderer.recover(&raw) {
+                                log::warn!("Android GPU recovery failed: {error:#}");
+                                self.host.wake();
+                                return;
+                            }
+                            force_render = true;
+                        }
+                        force_render |= renderer.needs_redraw();
+                    }
+                }
                 let callback = s.callbacks.borrow_mut().frame.take();
                 if let Some(mut callback) = callback {
-                    callback(RequestFrameOptions::default());
+                    callback(RequestFrameOptions {
+                        force_render,
+                        ..Default::default()
+                    });
                     s.callbacks.borrow_mut().frame = Some(callback);
                 }
             }
@@ -610,6 +633,7 @@ pub(crate) struct State {
     config: RefCell<TextInputConfiguration>,
     contacts: RefCell<HashMap<i32, (TouchId, Point<Pixels>)>>,
     next_contact: Cell<u64>,
+    force_render: Cell<bool>,
     a11y: RefCell<Option<A11yCallbacks>>,
     nodes: RefCell<BTreeMap<u64, accesskit::Node>>,
     root: Cell<u64>,
@@ -635,6 +659,7 @@ impl State {
             config: RefCell::new(TextInputConfiguration::default()),
             contacts: RefCell::new(HashMap::new()),
             next_contact: Cell::new(0),
+            force_render: Cell::new(false),
             a11y: RefCell::new(None),
             nodes: RefCell::new(BTreeMap::new()),
             root: Cell::new(0),
@@ -649,6 +674,13 @@ impl State {
         };
         let mut renderer = self.renderer.borrow_mut();
         if let Some(renderer) = renderer.as_mut() {
+            if renderer.device_lost() {
+                renderer.recover(&raw)?;
+                renderer.update_drawable_size(config.size);
+                self.force_render.set(true);
+                *self.native.borrow_mut() = Some(native);
+                return Ok(());
+            }
             let context = gpu.borrow();
             renderer.replace_surface(
                 &raw,
@@ -993,6 +1025,10 @@ impl PlatformWindow for AndroidWindow {
     fn draw(&self, scene: &Scene) {
         if let Some(r) = self.0.renderer.borrow_mut().as_mut() {
             r.draw(scene);
+            if r.needs_redraw() || r.device_lost() {
+                self.0.force_render.set(true);
+                self.0.host.wake();
+            }
         }
     }
     fn schedule_frame(&self) {

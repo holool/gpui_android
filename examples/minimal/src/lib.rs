@@ -163,6 +163,9 @@ mod mobile {
                 .child(
                     div()
                         .id("input")
+                        .role(Role::TextInput)
+                        .aria_label("Arabic input")
+                        .aria_value(self.text.clone())
                         .track_focus(&self.focus)
                         .bg(rgb(0x243247))
                         .rounded_md()
@@ -193,6 +196,7 @@ mod mobile {
                 .child(
                     div()
                         .id("scroll")
+                        .role(Role::ScrollView)
                         .overflow_y_scroll()
                         .flex_1()
                         .children((0..200).map(|i| {

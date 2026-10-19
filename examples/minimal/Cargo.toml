@@ -9,4 +9,4 @@ name = "gpui_minimal"
 crate-type = ["cdylib"]
 [target.'cfg(target_os = "android")'.dependencies]
 gpui_android = { path = "../.." }
-gpui = { git = "https://github.com/holool/gpui-fast", rev = "55c46ade80f217897b2c8c0a7d2f32ce5cd41dfe", default-features = false }
+gpui = { git = "https://github.com/holool/gpui-fast", rev = "9d8331d9da673ef68e731ee3a1fb59a67a9700ed", default-features = false }

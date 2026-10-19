@@ -109,7 +109,8 @@ internal class GpuiView(private val host:GpuiActivity):SurfaceView(host),Surface
     override fun onCheckIsTextEditor()=true
     override fun onCreateInputConnection(out:EditorInfo):InputConnection {
         val config=snapshot.optJSONObject("configuration")?:JSONObject()
-        out.inputType=InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        out.inputType=InputType.TYPE_CLASS_TEXT
+        if(config.optString("action") in listOf("Enter","Unspecified",""))out.inputType=out.inputType or InputType.TYPE_TEXT_FLAG_MULTI_LINE
         if(config.optBoolean("autocorrect"))out.inputType=out.inputType or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT
         if(!config.optBoolean("suggestions"))out.inputType=out.inputType or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
         out.inputType=out.inputType or when(config.optString("capitalize")){"Words"->InputType.TYPE_TEXT_FLAG_CAP_WORDS;"Sentences"->InputType.TYPE_TEXT_FLAG_CAP_SENTENCES;"Characters"->InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS;else->0}
@@ -189,7 +190,7 @@ internal class GpuiView(private val host:GpuiActivity):SurfaceView(host),Surface
                 className=when(n.optString("role")){"Button"->"android.widget.Button";"TextInput","MultilineTextInput"->"android.widget.EditText";"CheckBox"->"android.widget.CheckBox";else->"android.widget.TextView"}
                 text=n.optString("value").takeUnless{it=="null"}?:n.optString("label").takeUnless{it=="null"}
                 contentDescription=n.optString("label").takeUnless{it=="null"}
-                val rect=bounds(n);setBoundsInParent(rect);val position=IntArray(2);this@GpuiView.getLocationOnScreen(position);rect.offset(position[0],position[1]);setBoundsInScreen(rect)
+                val rect=bounds(n);val local=Rect(rect);parentId?.let{data[it]?.let{parentNode->val origin=bounds(parentNode);local.offset(-origin.left,-origin.top)}};setBoundsInParent(local);val position=IntArray(2);this@GpuiView.getLocationOnScreen(position);rect.offset(position[0],position[1]);setBoundsInScreen(rect)
                 val children=n.optJSONArray("children")?:JSONArray();for(i in 0 until children.length())addChild(this@GpuiView,virtualId(children.getString(i)))
                 if(n.optBoolean("click")){isClickable=true;addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_CLICK)}
                 isFocusable=n.optBoolean("focus");isAccessibilityFocused=id==accessibilityFocus
