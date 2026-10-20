@@ -15,8 +15,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [target.'cfg(target_os = "android")'.dependencies]
-gpui = { git = "https://github.com/holool/gpui-fast", rev = "892ef445f5d2851f542514b76dbce7c9b1ebeeee", default-features = false }
-gpui_wgpu = { git = "https://github.com/holool/gpui-fast", rev = "892ef445f5d2851f542514b76dbce7c9b1ebeeee", default-features = false }
+gpui = { git = "https://github.com/holool/gpui-fast", rev = "4152f0914665ffe06be31820e3f48ca4be39227c", default-features = false }
+gpui_wgpu = { git = "https://github.com/holool/gpui-fast", rev = "4152f0914665ffe06be31820e3f48ca4be39227c", default-features = false }
 anyhow = "1"
 futures = "0.3"
 jni = "0.21"
