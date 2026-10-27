@@ -8,7 +8,7 @@ export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$NDK_PATH/toolchains/llvm/preb
 export CC_aarch64_linux_android="$CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER"
 export AR_aarch64_linux_android="$NDK_PATH/toolchains/llvm/prebuilt/$NDK_HOST/bin/llvm-ar"
 export CARGO_PROFILE_DEV_DEBUG=0 CARGO_INCREMENTAL=0 CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}"
-cargo +1.95 rustc -p gpui-android-minimal --lib --target aarch64-linux-android --locked -- -C link-arg=-Wl,-z,max-page-size=16384 -C link-arg=-Wl,-z,common-page-size=16384
+cargo +1.99.0 rustc -p gpui-android-minimal --lib --target aarch64-linux-android --locked -- -C link-arg=-Wl,-z,max-page-size=16384 -C link-arg=-Wl,-z,common-page-size=16384
 LIB_DIR=examples/minimal/android/app/src/main/jniLibs/arm64-v8a
 mkdir -p "$LIB_DIR"
 cp target/aarch64-linux-android/debug/libgpui_minimal.so "$LIB_DIR/"

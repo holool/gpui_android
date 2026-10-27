@@ -6,7 +6,7 @@ This is an early backend, with one Android activity/window per application. Its 
 
 ## Build the runnable sample
 
-Install Rust 1.95, Android SDK platform/build-tools 36, NDK 27.1.12297006, and JDK 17. Set `ANDROID_HOME` if the SDK is outside the usual macOS location. The build script selects JDK 17 explicitly on macOS (override with `GPUI_JAVA_HOME`); Linux uses the configured JDK.
+Install Rust 1.99.0, Android SDK platform/build-tools 36, NDK 27.1.12297006, and JDK 17. Set `ANDROID_HOME` if the SDK is outside the usual macOS location. The build script selects JDK 17 explicitly on macOS (override with `GPUI_JAVA_HOME`); Linux uses the configured JDK.
 
 ```sh
 scripts/build-android.sh
