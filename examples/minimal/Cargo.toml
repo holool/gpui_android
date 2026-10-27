@@ -2,11 +2,11 @@
 name = "gpui-android-minimal"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.95"
+rust-version = "1.99.0"
 publish = false
 [lib]
 name = "gpui_minimal"
 crate-type = ["cdylib"]
 [target.'cfg(target_os = "android")'.dependencies]
 gpui_android = { path = "../.." }
-gpui = { git = "https://github.com/holool/gpui-fast", rev = "c4e8f3c1b71741eb13eaa793e11561fc53deda35", default-features = false }
+gpui = { git = "https://github.com/holool/gpui-fast", rev = "c1d2067ce521826a138f7d9d4fe94299b83ff267", default-features = false }

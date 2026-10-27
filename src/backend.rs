@@ -448,6 +448,13 @@ impl PlatformKeyboardLayout for KeyboardLayout {
     }
 }
 impl Platform for AndroidPlatform {
+    fn platform_info(&self) -> PlatformInfo {
+        PlatformInfo {
+            os: OperatingSystem::Android,
+            target: PlatformTarget::Native,
+        }
+    }
+
     fn background_executor(&self) -> BackgroundExecutor {
         self.background.clone()
     }
@@ -875,6 +882,7 @@ impl State {
         let value = WindowInsets {
             safe_area: edge(&values[..4]),
             ime: edge(&values[4..]),
+            ..Default::default()
         };
         *self.insets.borrow_mut() = value.clone();
         let cb = self.callbacks.borrow_mut().insets.take();

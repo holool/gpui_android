@@ -15,7 +15,7 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: '1.95'
+          toolchain: '1.99.0'
           targets: aarch64-linux-android
       - uses: Swatinem/rust-cache@v2
       - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.1.12297006'
